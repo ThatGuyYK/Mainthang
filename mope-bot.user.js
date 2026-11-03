@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         mope.io 1v1 apex bot (Venice)
 // @namespace    venice.mope.bot
-// @version      1.1.1
+// @version      1.1.2
 // @description  1v1 apex tail-biter with ESP. B = bot on/off, X = ESP, H = panel.
 // @author       Venice
 // @match        https://mope.io/*
@@ -35,6 +35,7 @@
   };
   const CFG = Object.assign({}, DEFAULTS);
   try { Object.assign(CFG, JSON.parse(localStorage.getItem(LS_KEY) || '{}')); } catch (e) {}
+  CFG.panel = true; // always show the panel on page load; H hides it for this visit
   const saveCfg = () => { try { localStorage.setItem(LS_KEY, JSON.stringify(CFG)); } catch (e) {} };
 
   const APEX = new Set([
@@ -535,7 +536,13 @@
   const inputs = {}; // FIX #17: keep references so hotkeys can update them
 
   function buildPanel() {
-    if (panel) return;
+    if (panel) {
+      // The page can rebuild its DOM after load and drop our panel; put it back.
+      if (!panel.isConnected && (document.body || document.documentElement)) {
+        (document.body || document.documentElement).appendChild(panel);
+      }
+      return;
+    }
     if (!document.body && !document.documentElement) return;
     panel = el('div');
     panel.style.cssText = [
@@ -607,6 +614,7 @@
   }
 
   setInterval(() => {
+    buildPanel();
     if (!statusEl) return;
     statusEl.textContent = APP
       ? `ok · others ${others().length} · ${ptrMode || 'calib'} · ${CFG.bot ? 'FIGHT' : 'idle'}`
