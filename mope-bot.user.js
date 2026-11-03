@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         mope.io 1v1 apex bot (Venice)
 // @namespace    venice.mope.bot
-// @version      1.1.2
+// @version      1.1.3
 // @description  1v1 apex tail-biter with ESP. B = bot on/off, X = ESP, H = panel.
 // @author       Venice
 // @match        https://mope.io/*
@@ -641,7 +641,9 @@
    *  boot
    * ------------------------------------------------------------------ */
   function boot() {
+    console.info('[mope-bot] v1.1.3 loaded on', location.href);
     buildPanel();
+    console.info('[mope-bot] panel', panel && panel.isConnected ? 'attached' : 'NOT attached');
     syncKeys();
     scanForApp();
   }
