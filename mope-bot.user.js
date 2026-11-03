@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         mope.io 1v1 apex bot (Venice)
 // @namespace    venice.mope.bot
-// @version      1.1.0
+// @version      1.1.1
 // @description  1v1 apex tail-biter with ESP. B = bot on/off, X = ESP, H = panel.
 // @author       Venice
 // @match        https://mope.io/*
@@ -83,12 +83,19 @@
     return SOCKETS.has(n.socket) || SOCKETS.has(n.ws) || SOCKETS.has(n.connection) || SOCKETS.has(n.conn);
   };
 
+  // True for any Window object other than this page's own (iframes, popups).
+  // Reading `.window` is one of the few properties allowed cross-origin.
+  const isForeignWindow = (v) => {
+    try { return v !== window && v.window === v; } catch (e) { return true; }
+  };
+
   function scanForApp() {
     if (APP) return true;
 
     for (const k of ['mope', 'mopeio', '__mopeApp', '__mope', 'game', 'app', 'MOPE', 'GAME', 'client']) {
       let v; try { v = window[k]; } catch (e) { continue; }
-      if (isAppShape(v)) { APP = v; return true; }
+      if (isForeignWindow(v)) continue;
+      try { if (isAppShape(v)) { APP = v; return true; } } catch (e) {}
     }
 
     const seen = new Set();
@@ -106,8 +113,14 @@
       for (const k of keys) {
         let v; try { v = obj[k]; } catch (e) { continue; }
         if (!v || typeof v !== 'object') continue;
-        if (v.nodeType) continue;
-        if (isSocketOwner(v) || isAppShape(v)) { APP = v; return true; }
+        // Cross-origin frames (ads, embeds) throw a SecurityError on almost
+        // any property read. Skip every Window except our own, and guard the
+        // remaining checks so one bad object can't abort the whole scan.
+        if (isForeignWindow(v)) continue;
+        try {
+          if (v.nodeType) continue;
+          if (isSocketOwner(v) || isAppShape(v)) { APP = v; return true; }
+        } catch (e) { continue; }
         if (depth < 3) queue.push([v, depth + 1]); // one level deeper than before
       }
     }
@@ -116,7 +129,8 @@
     for (let i = 0; node && i < 6; i++, node = node.parentElement) {
       for (const k of Object.keys(node)) {
         let v; try { v = node[k]; } catch (e) { continue; }
-        if (isAppShape(v) || isSocketOwner(v)) { APP = v; return true; }
+        if (isForeignWindow(v)) continue;
+        try { if (isAppShape(v) || isSocketOwner(v)) { APP = v; return true; } } catch (e) {}
       }
     }
     return false;
